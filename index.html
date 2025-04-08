@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הצגת מסמכים</title>
+</head>
+<body>
+    <h2>הכנס סיסמא ושם פרשה:</h2>
+    
+    <label for="password">סיסמא:</label>
+    <input type="password" id="password" required><br><br>
+
+    <label for="parsha">שם פרשה:</label>
+    <input type="text" id="parsha" required><br><br>
+
+    <button onclick="checkPassword()">הצג את המסמך</button>
+
+    <div id="error" style="color: red;"></div>
+    <div id="document-container"></div>
+
+    <script>
+        function checkPassword() {
+            const enteredPassword = document.getElementById("password").value;
+            const enteredParsha = document.getElementById("parsha").value;
+
+            // מזהה גיליון גוגל שיטס ומפתח ה-API
+            const sheetId = "1YWCM1uctEsK-504WkMSdsBm5y56GBwRB3Hy_r1OYXuI"; 
+            const apiKey = "AIzaSyClmkLxcxXdKkrmGVY2fjTsVgf31RcMS_4"; 
+
+            // בודקים את הסיסמא מתוך הגיליון
+            fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A2?key=${apiKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    const correctPassword = data.values[0][0]; // הסיסמא שנמצאת בתא A2
+
+                    if (enteredPassword === correctPassword) {
+                        // אם הסיסמא נכונה, בודקים את שם הפרשה
+                        fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/B:D?key=${apiKey}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                let found = false;
+                                data.values.forEach(row => {
+                                    if (row[0] === enteredParsha) {
+                                        // אם שם הפרשה נמצא בגיליון
+                                        const fileUrl = row[3]; // קישור למסמך בעמודה D
+
+                                        // המרת הקישור להטמעה (מוסיפים preview לקישור של Google Drive)
+                                        const embedUrl = fileUrl.replace("/view?", "/preview?");
+
+                                        // הצגת הקובץ בהטמעה בתוך iframe
+                                        document.getElementById("document-container").innerHTML = `
+                                            <iframe src="${embedUrl}" width="640" height="480"></iframe>
+                                        `;
+                                        found = true;
+                                    }
+                                });
+
+                                if (!found) {
+                                    document.getElementById("error").innerText = "הפרשה לא נמצאה.";
+                                }
+                            })
+                            .catch(error => {
+                                document.getElementById("error").innerText = "שגיאה בעת קריאת גיליון גוגל.";
+                                console.error(error);
+                            });
+                    } else {
+                        document.getElementById("error").innerText = "סיסמא לא נכונה.";
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("error").innerText = "שגיאה בעת קריאת הסיסמא בגיליון.";
+                    console.error(error);
+                });
+        }
+    </script>
+</body>
+</html>
